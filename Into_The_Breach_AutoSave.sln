@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30225.117
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Into_The_Breach_AutoSave", "Into_The_Breach_AutoSave\Into_The_Breach_AutoSave.csproj", "{99C70FE7-BA7F-4E3E-A11C-11154FF2443A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{99C70FE7-BA7F-4E3E-A11C-11154FF2443A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99C70FE7-BA7F-4E3E-A11C-11154FF2443A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99C70FE7-BA7F-4E3E-A11C-11154FF2443A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99C70FE7-BA7F-4E3E-A11C-11154FF2443A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BA7BF069-6D4E-4336-BD7B-2CB8E3AC977E}
+	EndGlobalSection
+EndGlobal
