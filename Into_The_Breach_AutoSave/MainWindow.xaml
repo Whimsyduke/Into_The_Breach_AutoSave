@@ -43,7 +43,7 @@
                     Grid.Column="0"
                     Margin="3"
                     Content="激活"
-                    IsEnabled="{Binding ElementName=SelectPathControl_SaveFolder, Path=IsPathExist}" />
+                    IsEnabled="{Binding ElementName=SelectPathControl_SaveFolder, Path=IsPathExist}" Click="Button_Active_Click" />
                 <Button
                     x:Name="Button_Load"
                     Grid.Column="1"

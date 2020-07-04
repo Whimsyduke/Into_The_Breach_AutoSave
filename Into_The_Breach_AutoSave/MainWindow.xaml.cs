@@ -69,7 +69,19 @@ namespace Into_The_Breach_AutoSave
         /// 保存路径
         /// </summary>
         [XmlElement(nameof(SavePath))]
-        public string SavePath { set; get; } = GetDefaultSavePath();
+        public string SavePath 
+        { 
+            set
+            {
+                MSavePath = value;
+                MainWindow.Window.SetWatchFolder(value);
+            }
+            get
+            {
+                return MSavePath;
+            } 
+        }
+        private string MSavePath = GetDefaultSavePath();
 
         /// <summary>
         /// 配置文件保存路径
@@ -257,7 +269,6 @@ namespace Into_The_Breach_AutoSave
 
     }
 
-
     /// <summary>
     /// 主窗口
     /// </summary>
@@ -296,6 +307,16 @@ namespace Into_The_Breach_AutoSave
         /// </summary>
         public static MainWindow Window { private set; get; }
 
+        /// <summary>
+        /// 路径监控器
+        /// </summary>
+        public FileSystemWatcher Watcher { get; } = InitWatcher();
+
+        /// <summary>
+        /// 监控器激活
+        /// </summary>
+        public bool IsWatcherActive { set; get; } = false;
+
         #endregion 属性
 
         #region 字段
@@ -314,6 +335,7 @@ namespace Into_The_Breach_AutoSave
             Preference.PreferenceInit();
             Preference.LoadFromFile();
             Window = this;
+            MainWindow.Window.SetWatchFolder(Preference.Instance.SavePath);
             InitializeComponent();
             Preference.Instance.SetToUI();
         }
@@ -323,6 +345,50 @@ namespace Into_The_Breach_AutoSave
         #region 方法
 
         #region 通用方法
+
+        /// <summary>
+        /// 初始化目录
+        /// </summary>
+        public static FileSystemWatcher InitWatcher()
+        {
+            FileSystemWatcher watcher = new FileSystemWatcher
+            {
+                // Watch for changes in LastAccess and LastWrite times, and
+                // the renaming of files or directories.
+                NotifyFilter = NotifyFilters.LastAccess
+                                 | NotifyFilters.LastWrite
+                                 | NotifyFilters.FileName
+                                 | NotifyFilters.DirectoryName,
+
+                // Only watch text files.
+                Filter = "*.lua",
+                IncludeSubdirectories = true,
+            };
+
+            // Add event handlers.
+            watcher.Changed += OnChanged;
+            watcher.Created += OnChanged;
+            watcher.Deleted += OnChanged;
+
+            return watcher;
+        }
+
+        /// <summary>
+        /// 监控目录
+        /// </summary>
+        public void SetWatchFolder(string path)
+        {
+            Watcher.Path = path;
+        }
+
+        /// <summary>
+        /// 启动监控器
+        /// </summary>
+        /// <param name="isEnable"></param>
+        public void EnableWatcher(bool isEnable)
+        {
+            Watcher.EnableRaisingEvents = isEnable;
+        }
 
         #endregion 通用方法
 
@@ -340,6 +406,29 @@ namespace Into_The_Breach_AutoSave
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             Preference.SaveToFile(Preference.Preference_ConfigFile);
+        }
+
+        /// <summary>
+        /// 激活点击事件
+        /// </summary>
+        /// <param name="sender">事件控件</param>
+        /// <param name="e">响应参数</param>
+        private void Button_Active_Click(object sender, RoutedEventArgs e)
+        {
+            IsWatcherActive = !IsWatcherActive;
+            SelectPathControl_SaveFolder.IsEnabled = !IsWatcherActive;
+            Button_Active.Content = IsWatcherActive ? "停止" : "激活";
+            EnableWatcher(IsWatcherActive);
+        }
+
+        /// <summary>
+        /// 变化对象
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="e"></param>
+        private static void OnChanged(object source, FileSystemEventArgs e)
+        {
+
         }
         #endregion 事件方法 
 
