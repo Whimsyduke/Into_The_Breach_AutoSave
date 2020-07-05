@@ -36,13 +36,12 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Button
                         x:Name="Button_Active"
@@ -57,29 +56,51 @@
                         Margin="3"
                         Content="加载"
                         IsEnabled="{Binding ElementName=SelectPathControl_SaveFolder, Path=IsPathExist}" />
-                    <TextBlock
-                        Grid.Column="2"
-                        VerticalAlignment="Center"
-                        Text="备份上限：" />
-                    <controlLib:NumericUpDown
-                        x:Name="NumbicUpDown_MaxBackupCount"
-                        Grid.Column="3"
-                        Width="60"
-                        Margin="3"
-                        Increment="1"
-                        MaxValue="500"
-                        MinValue="0"
-                        Value="{x:Static local:Preference.Const_MaxBackupCount}" />
                 </Grid>
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <TextBlock
                         Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Margin="3"
+                        Text="备份上限：" />
+                    <controlLib:NumericUpDown
+                        x:Name="NumbicUpDown_MaxBackupCount"
+                        Grid.Column="1"
+                        Width="Auto"
+                        Margin="3"
+                        Increment="1"
+                        MaxValue="500"
+                        MinValue="0"
+                        Value="{x:Static local:Preference.Const_MaxBackupCount}" />
+                    <TextBlock
+                        Grid.Column="2"
+                        Margin="3"
+                        VerticalAlignment="Center"
+                        Text="检测间隔：" />
+                    <controlLib:NumericUpDown
+                        x:Name="NumbicUpDown_WaitInterval"
+                        Grid.Column="3"
+                        Width="Auto"
+                        Margin="3"
+                        Increment="1"
+                        MaxValue="100000"
+                        MinValue="0"
+                        Value="{x:Static local:Preference.Const_WaitInterval}" />
+                </Grid>
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        Grid.Column="0"
+                        Margin="3"
                         VerticalAlignment="Center"
                         Text="文件筛选：" />
                     <TextBox
@@ -87,19 +108,6 @@
                         Grid.Column="1"
                         Margin="3"
                         Text="{x:Static local:Preference.Const_FileFilter}" />
-                    <TextBlock
-                        Grid.Column="2"
-                        VerticalAlignment="Center"
-                        Text="检测间隔：" />
-                    <controlLib:NumericUpDown
-                        x:Name="NumbicUpDown_WaitInterval"
-                        Grid.Column="3"
-                        Width="60"
-                        Margin="3"
-                        Increment="1"
-                        MaxValue="100000"
-                        MinValue="0"
-                        Value="{x:Static local:Preference.Const_WaitInterval}" />
                 </Grid>
             </Grid>
         </GroupBox>

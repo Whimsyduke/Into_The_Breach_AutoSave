@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -14,6 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Xml.Serialization;
+using ICSharpCode.SharpZipLib.Zip;
 
 namespace Into_The_Breach_AutoSave
 {
@@ -87,8 +89,8 @@ namespace Into_The_Breach_AutoSave
         /// 保存路径
         /// </summary>
         [XmlElement(nameof(SavePath))]
-        public string SavePath 
-        { 
+        public string SavePath
+        {
             set
             {
                 MSavePath = value;
@@ -97,7 +99,7 @@ namespace Into_The_Breach_AutoSave
             get
             {
                 return MSavePath;
-            } 
+            }
         }
         private string MSavePath = GetDefaultSavePath();
 
@@ -362,7 +364,21 @@ namespace Into_The_Breach_AutoSave
         /// <summary>
         /// 监控器激活
         /// </summary>
-        public bool IsWatcherActive { set; get; } = false;
+        public bool IsWatcherActive
+        {
+            set
+            {
+                MIsWatcherActive = value;
+                EnableWatcher(value);
+            }
+            get => MIsWatcherActive;
+        }
+        private bool MIsWatcherActive = false;
+
+        /// <summary>
+        /// 等待计时器
+        /// </summary>
+        public Timer WaitTimer { set; get; } = new Timer();
 
         #endregion 属性
 
@@ -380,6 +396,8 @@ namespace Into_The_Breach_AutoSave
         public MainWindow()
         {
             Window = this;
+            WaitTimer.AutoReset = false;
+            WaitTimer.Elapsed += WaitTimerTimeout;
             Preference.PreferenceInit();
             Preference.LoadFromFile();
             MainWindow.Window.SetWatchFolder(Preference.Instance.SavePath);
@@ -437,6 +455,88 @@ namespace Into_The_Breach_AutoSave
             Watcher.EnableRaisingEvents = isEnable;
         }
 
+        /// <summary>   
+        /// 压缩文件   
+        /// </summary>   
+        /// <param name="fileNames">要打包的文件列表</param>  
+        /// <param name="basePatch">压缩基础目录</param>    
+        /// <param name="GzipFileName">目标文件名</param>   
+        /// <param name="CompressionLevel">压缩品质级别（0~9）</param>   
+        private static void Compress(List<FileInfo> fileNames, string basePatch, string zipFileName, int compressionLevel)
+        {
+            string replacePath;
+            if (basePatch.Last() == '\\')
+            {
+                replacePath = basePatch;
+            }
+            else
+            {
+                replacePath = basePatch + "\\";
+            }
+            ZipOutputStream s = new ZipOutputStream(System.IO.File.Create(zipFileName));
+            try
+            {
+                s.SetLevel(compressionLevel);   //0 - store only to 9 - means best compression   
+                foreach (FileInfo file in fileNames)
+                {
+                    FileStream fs = null;
+                    try
+                    {
+                        fs = file.Open(FileMode.Open, FileAccess.ReadWrite);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    byte[] data = new byte[2048];
+                    int size = 2048;
+                    ZipEntry entry = new ZipEntry(file.FullName.Replace(replacePath, string.Empty))
+                    {
+                        DateTime = (file.CreationTime > file.LastWriteTime ? file.LastWriteTime : file.CreationTime)
+                    };
+                    s.PutNextEntry(entry);
+                    while (true)
+                    {
+                        size = fs.Read(data, 0, size);
+                        if (size <= 0) break;
+                        s.Write(data, 0, size);
+                    }
+                    fs.Close();
+                }
+            }
+            finally
+            {
+                s.Finish();
+                s.Close();
+            }
+        }
+
+        /// <summary>
+        /// 获取所有自己文件
+        /// </summary>
+        /// <param name="dir">目标目录</param>
+        /// <param name="list">文件列表</param>
+        private static void GetFileList(DirectoryInfo dir, List<FileInfo> list)
+        {
+            list.AddRange(dir.GetFiles());
+            foreach (DirectoryInfo subDir in dir.GetDirectories())
+            {
+                GetFileList(subDir, list);
+            }
+        }
+
+        /// <summary>
+        /// 生成备份文件包
+        /// </summary>
+        /// <param name="dir">目标目录</param>
+        public static void GenerateBackupPacket(DirectoryInfo dir)
+        {
+            List<FileInfo> fileList = new List<FileInfo>();
+            GetFileList(dir, fileList);
+            string fileName = $"{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-ffff")}.zip";
+            Compress(fileList, dir.FullName, fileName, 9);
+        }
+
         #endregion 通用方法
 
         #region 重写方法
@@ -465,17 +565,28 @@ namespace Into_The_Breach_AutoSave
             IsWatcherActive = !IsWatcherActive;
             SelectPathControl_SaveFolder.IsEnabled = !IsWatcherActive;
             Button_Active.Content = IsWatcherActive ? "停止" : "激活";
-            EnableWatcher(IsWatcherActive);
         }
 
         /// <summary>
         /// 变化对象
         /// </summary>
-        /// <param name="source"></param>
-        /// <param name="e"></param>
+        /// <param name="source">事件来源</param>
+        /// <param name="e">事件参数</param>
         private static void OnChanged(object source, FileSystemEventArgs e)
         {
+            Window.WaitTimer.Stop();
+            Window.WaitTimer.Interval = Preference.Instance.WaitInterval;
+            Window.WaitTimer.Start();
+        }
 
+        /// <summary>
+        /// 计时器到期事件
+        /// </summary>
+        /// <param name="source">事件来源</param>
+        /// <param name="e">事件参数</param>
+        public void WaitTimerTimeout(object source, System.Timers.ElapsedEventArgs e)
+        {
+            GenerateBackupPacket(new DirectoryInfo(Preference.Instance.SavePath));
         }
         #endregion 事件方法 
 
