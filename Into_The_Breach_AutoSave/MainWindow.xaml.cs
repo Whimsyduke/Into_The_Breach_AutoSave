@@ -27,7 +27,25 @@ namespace Into_The_Breach_AutoSave
 
         #region 常量
 
+        /// <summary>
+        /// 配置文件名称
+        /// </summary>
         public const string Const_PreferenceFileName = "Preference.cfg";
+
+        /// <summary>
+        /// 备份上限
+        /// </summary>
+        public const double Const_MaxBackupCount = 10;
+
+        /// <summary>
+        /// 监测文件名筛选
+        /// </summary>
+        public const string Const_FileFilter = "*.Lua";
+
+        /// <summary>
+        /// 检测间隔
+        /// </summary>
+        public const double Const_WaitInterval = 1000;
 
         #endregion 常量
 
@@ -84,6 +102,24 @@ namespace Into_The_Breach_AutoSave
         private string MSavePath = GetDefaultSavePath();
 
         /// <summary>
+        /// 备份上限
+        /// </summary>
+        [XmlElement(nameof(MaxBackupCount))]
+        public int MaxBackupCount { set; get; } = (int)Const_MaxBackupCount;
+
+        /// <summary>
+        /// 监测文件名筛选
+        /// </summary>
+        [XmlElement(nameof(FileFilter))]
+        public string FileFilter { set; get; } = Const_FileFilter;
+
+        /// <summary>
+        /// 检测间隔
+        /// </summary>
+        [XmlElement(nameof(WaitInterval))]
+        public int WaitInterval { set; get; } = (int)Const_WaitInterval;
+
+        /// <summary>
         /// 配置文件保存路径
         /// </summary>
         [XmlIgnore]
@@ -131,7 +167,11 @@ namespace Into_The_Breach_AutoSave
         /// <param name="preference">配置来源</param>
         public void Copy(Preference preference)
         {
+            IsSettingToUI = preference.IsSettingToUI;
             SavePath = preference.SavePath;
+            MaxBackupCount = preference.MaxBackupCount;
+            FileFilter = preference.FileFilter;
+            WaitInterval = preference.WaitInterval;
         }
 
         /// <summary>
@@ -141,6 +181,10 @@ namespace Into_The_Breach_AutoSave
         {
             IsSettingToUI = true;
             MainWindow.Window.SelectPathControl_SaveFolder.PathText = SavePath;
+            MainWindow.Window.NumbicUpDown_MaxBackupCount.Value = MaxBackupCount;
+            MainWindow.Window.TextBox_WatcherFilter.Text = FileFilter;
+            MainWindow.Window.NumbicUpDown_WaitInterval.Value = WaitInterval;
+
             IsSettingToUI = false;
         }
 
@@ -151,6 +195,9 @@ namespace Into_The_Breach_AutoSave
         {
             if (IsSettingToUI) return;
             SavePath = MainWindow.Window.SelectPathControl_SaveFolder.PathText;
+            MaxBackupCount = (int)MainWindow.Window.NumbicUpDown_MaxBackupCount.Value;
+            FileFilter = MainWindow.Window.TextBox_WatcherFilter.Text;
+            WaitInterval = (int)MainWindow.Window.NumbicUpDown_WaitInterval.Value;
         }
 
         /// <summary>
@@ -332,9 +379,9 @@ namespace Into_The_Breach_AutoSave
         /// </summary>
         public MainWindow()
         {
+            Window = this;
             Preference.PreferenceInit();
             Preference.LoadFromFile();
-            Window = this;
             MainWindow.Window.SetWatchFolder(Preference.Instance.SavePath);
             InitializeComponent();
             Preference.Instance.SetToUI();
