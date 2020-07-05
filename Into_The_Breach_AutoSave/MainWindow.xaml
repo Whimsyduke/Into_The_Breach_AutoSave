@@ -56,7 +56,7 @@
                         Grid.Column="1"
                         Margin="3"
                         Content="加载"
-                        IsEnabled="False" />
+                        IsEnabled="False" Click="Button_Load_Click" />
                     <Button
                         x:Name="Button_Delete"
                         Grid.Column="2"

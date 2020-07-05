@@ -95,7 +95,7 @@ namespace Into_The_Breach_AutoSave
             set
             {
                 MSavePath = value;
-                MainWindow.Window.SetWatchFolder(value);
+                if (Directory.Exists(value)) MainWindow.Window.SetWatchFolder(value);
             }
             get
             {
@@ -442,7 +442,6 @@ namespace Into_The_Breach_AutoSave
             WaitTimer.Elapsed += WaitTimerTimeout;
             Preference.PreferenceInit();
             Preference.LoadFromFile();
-            MainWindow.Window.SetWatchFolder(Preference.Instance.SavePath);
             InitializeComponent();
             IsOnInit = false;
             Preference.Instance.SetToUI();
@@ -552,6 +551,78 @@ namespace Into_The_Breach_AutoSave
                 s.Finish();
                 s.Close();
             }
+        }
+        /// <summary>  
+        /// 解压文件。  
+        /// </summary>  
+        /// <param name="zipFilePath">压缩文件路径</param>  
+        /// <param name="unZipDir">解压文件存放路径,为空时默认与压缩文件同一级目录下，跟压缩文件同名的文件夹</param>  
+        /// <returns>解压是否成功</returns>  
+        public static bool UnZip(string zipFilePath, string unZipDir)
+        {
+            try
+            {
+                if (zipFilePath == string.Empty)
+                {
+                    throw new Exception("压缩文件不能为空！");
+                }
+                if (!File.Exists(zipFilePath))
+                {
+                    throw new FileNotFoundException("压缩文件不存在！");
+                }
+                //解压文件夹为空时默认与压缩文件同一级目录下，跟压缩文件同名的文件夹  
+                if (string.IsNullOrEmpty(unZipDir))
+                    unZipDir = zipFilePath.Replace(System.IO.Path.GetFileName(zipFilePath), System.IO.Path.GetFileNameWithoutExtension(zipFilePath));
+                if (!unZipDir.EndsWith("/"))
+                    unZipDir += "/";
+                if (!Directory.Exists(unZipDir))
+                    Directory.CreateDirectory(unZipDir);
+                using (var s = new ZipInputStream(File.OpenRead(zipFilePath)))
+                {
+
+                    ZipEntry theEntry;
+                    while ((theEntry = s.GetNextEntry()) != null)
+                    {
+                        string directoryName = System.IO.Path.GetDirectoryName(theEntry.Name);
+                        string fileName = System.IO.Path.GetFileName(theEntry.Name);
+                        if (!string.IsNullOrEmpty(directoryName))
+                        {
+                            Directory.CreateDirectory(unZipDir + directoryName);
+                        }
+                        if (directoryName != null && !directoryName.EndsWith("/"))
+                        {
+                        }
+                        if (fileName != String.Empty)
+                        {
+                            using (FileStream streamWriter = File.Create(unZipDir + theEntry.Name))
+                            {
+
+                                int size;
+                                byte[] data = new byte[2048];
+                                while (true)
+                                {
+                                    size = s.Read(data, 0, data.Length);
+                                    if (size > 0)
+                                    {
+                                        streamWriter.Write(data, 0, size);
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+            catch (Exception)
+            {
+
+                return false;
+            }
+
         }
 
         /// <summary>
@@ -730,6 +801,37 @@ namespace Into_The_Breach_AutoSave
         }
 
         /// <summary>
+        /// 加载存档
+        /// </summary>
+        /// <param name="source">事件来源</param>
+        /// <param name="e">事件参数</param>
+        private void Button_Load_Click(object sender, RoutedEventArgs e)
+        {
+            if (ListView_Backups.SelectedItem is ListViewItem item && item != null)
+            {
+                try
+                {
+                    string path = Preference.Instance.SavePath;
+                    Directory.Move(path, $"{path}.backup");
+                }
+                catch (Exception err)
+                {
+                    MessageBox.Show($"移动存档失败:\r\n{err.Message}");
+                }
+                try
+                {
+                    string path = item.Tag as string;
+                    UnZip(path, Preference.Instance.SavePath);
+                }
+                catch (Exception err)
+                {
+                    MessageBox.Show($"解压存档失败:\r\n{err.Message}");
+                }
+                MessageBox.Show("加载成功！");
+            }
+        }
+
+        /// <summary>
         /// 删除按钮点击事件
         /// </summary>
         /// <param name="source">事件来源</param>
@@ -764,7 +866,9 @@ namespace Into_The_Breach_AutoSave
         private static void OnChanged(object source, FileSystemEventArgs e)
         {
             Window.WaitTimer.Stop();
+            Window.IsWatcherActive = false;
             Window.WaitTimer.Interval = Preference.Instance.WaitInterval;
+            Window.IsWatcherActive = true;
             Window.WaitTimer.Start();
         }
 
