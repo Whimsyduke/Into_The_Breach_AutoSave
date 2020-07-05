@@ -626,6 +626,36 @@ namespace Into_The_Breach_AutoSave
         }
 
         /// <summary>
+        /// 移动复制目录
+        /// </summary>
+        /// <param name="src">原位置</param>
+        /// <param name="desc">目标位置</param>
+        /// <param name="isMove">为移动</param>
+        private void MoveCopyFolder(DirectoryInfo src, string desc, bool isMove)
+        {
+            if (!Directory.Exists(desc))
+            {
+                Directory.CreateDirectory(desc);
+            }
+            foreach (FileInfo file in src.GetFiles())
+            {
+                if (isMove)
+                {
+                    file.MoveTo($"{desc}\\{file.Name}");
+                }
+                else
+                {
+                    file.CopyTo($"{desc}\\{file.Name}");
+                }
+            }
+            foreach (DirectoryInfo dir in src.GetDirectories())
+            {
+                MoveCopyFolder(dir, $"{desc}\\{dir.Name}", isMove);
+                if (isMove) dir.Delete();
+            }
+        }
+
+        /// <summary>
         /// 获取所有自己文件
         /// </summary>
         /// <param name="dir">目标目录</param>
@@ -801,22 +831,36 @@ namespace Into_The_Breach_AutoSave
         }
 
         /// <summary>
-        /// 加载存档
+        /// 备份存档
         /// </summary>
         /// <param name="source">事件来源</param>
         /// <param name="e">事件参数</param>
-        private void Button_Load_Click(object sender, RoutedEventArgs e)
+        private void Button_Backup_Click(object sender, RoutedEventArgs e)
+        {
+            string path = GenerateBackupPacket(new DirectoryInfo(Preference.Instance.SavePath));
+            AddBackupRecord(path);
+        }
+
+        /// <summary>
+        /// 还原存档
+        /// </summary>
+        /// <param name="source">事件来源</param>
+        /// <param name="e">事件参数</param>
+        private void Button_Restore_Click(object sender, RoutedEventArgs e)
         {
             if (ListView_Backups.SelectedItem is ListViewItem item && item != null)
             {
                 try
                 {
                     string path = Preference.Instance.SavePath;
-                    Directory.Move(path, $"{path}.backup");
+                    string backup = $"{path}.backup";
+                    if (Directory.Exists(backup)) Directory.Delete(backup, true);
+                    Directory.Move(path, backup);
                 }
                 catch (Exception err)
                 {
                     MessageBox.Show($"移动存档失败:\r\n{err.Message}");
+                    return;
                 }
                 try
                 {
@@ -826,6 +870,7 @@ namespace Into_The_Breach_AutoSave
                 catch (Exception err)
                 {
                     MessageBox.Show($"解压存档失败:\r\n{err.Message}");
+                    return;
                 }
                 MessageBox.Show("加载成功！");
             }
@@ -854,7 +899,7 @@ namespace Into_The_Breach_AutoSave
         private void ListView_Backups_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             bool enable = ListView_Backups.SelectedItem != null && SelectPathControl_SaveFolder.IsPathExist == true;
-            Button_Load.IsEnabled = enable;
+            Button_Restore.IsEnabled = enable;
             Button_Delete.IsEnabled = enable;
         }
 

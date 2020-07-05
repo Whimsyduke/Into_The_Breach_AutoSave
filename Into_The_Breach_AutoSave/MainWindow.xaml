@@ -43,6 +43,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <Button
                         x:Name="Button_Active"
@@ -52,14 +53,22 @@
                         Content="激活"
                         IsEnabled="{Binding ElementName=SelectPathControl_SaveFolder, Path=IsPathExist}" />
                     <Button
-                        x:Name="Button_Load"
+                        x:Name="Button_Backup"
                         Grid.Column="1"
                         Margin="3"
-                        Content="加载"
-                        IsEnabled="False" Click="Button_Load_Click" />
+                        Click="Button_Backup_Click"
+                        Content="备份"
+                        IsEnabled="{Binding ElementName=SelectPathControl_SaveFolder, Path=IsPathExist}" />
+                    <Button
+                        x:Name="Button_Restore"
+                        Grid.Column="2"
+                        Margin="3"
+                        Click="Button_Restore_Click"
+                        Content="还原"
+                        IsEnabled="False" />
                     <Button
                         x:Name="Button_Delete"
-                        Grid.Column="2"
+                        Grid.Column="3"
                         Margin="3"
                         Click="Button_Delete_Click"
                         Content="删除"
