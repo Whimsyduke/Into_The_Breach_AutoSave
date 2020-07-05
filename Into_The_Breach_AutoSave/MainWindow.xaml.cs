@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
@@ -127,6 +128,12 @@ namespace Into_The_Breach_AutoSave
         [XmlIgnore]
         public static FileInfo Preference_ConfigFile { private set; get; }
 
+        /// <summary>
+        /// 备份文件列表
+        /// </summary>
+        [XmlElement(nameof(BackupFiles))]
+        public List<string> BackupFiles { get; } = new List<string>();
+
         #endregion 属性
 
         #region 字段
@@ -174,6 +181,8 @@ namespace Into_The_Breach_AutoSave
             MaxBackupCount = preference.MaxBackupCount;
             FileFilter = preference.FileFilter;
             WaitInterval = preference.WaitInterval;
+            BackupFiles.Clear();
+            BackupFiles.AddRange(preference.BackupFiles);
         }
 
         /// <summary>
@@ -186,7 +195,8 @@ namespace Into_The_Breach_AutoSave
             MainWindow.Window.NumbicUpDown_MaxBackupCount.Value = MaxBackupCount;
             MainWindow.Window.TextBox_WatcherFilter.Text = FileFilter;
             MainWindow.Window.NumbicUpDown_WaitInterval.Value = WaitInterval;
-
+            RemoveNoFileBackups();
+            MainWindow.Window.RefreshBackupRecord();
             IsSettingToUI = false;
         }
 
@@ -200,11 +210,24 @@ namespace Into_The_Breach_AutoSave
             MaxBackupCount = (int)MainWindow.Window.NumbicUpDown_MaxBackupCount.Value;
             FileFilter = MainWindow.Window.TextBox_WatcherFilter.Text;
             WaitInterval = (int)MainWindow.Window.NumbicUpDown_WaitInterval.Value;
+            RemoveNoFileBackups();
+            MainWindow.Window.SaveBackupRecord();
+        }
+
+        /// <summary>
+        /// 移除无对应文件的备份记录
+        /// </summary>
+        public void RemoveNoFileBackups()
+        {
+            List<string> backList = BackupFiles.Where(r => File.Exists(r)).ToList();
+            BackupFiles.Clear();
+            BackupFiles.AddRange(backList);
         }
 
         /// <summary>
         /// 从文件加载配置
         /// </summary>
+        /// <returns>加载结果</returns>
         public static bool LoadFromFile()
         {
             if (!Preference_ConfigFile.Exists) return false;
@@ -242,6 +265,15 @@ namespace Into_The_Breach_AutoSave
                 MessageBox.Show("保存配置文件出错。");
             }
 #endif
+        }
+
+        /// <summary>
+        /// 是否超出备份上限
+        /// </summary>
+        /// <returns></returns>
+        public bool IsOutOfBackupCount()
+        {
+            return BackupFiles.Count > MaxBackupCount;
         }
 
         #region 序列化文件
@@ -327,6 +359,11 @@ namespace Into_The_Breach_AutoSave
 
         #region 常量
 
+        /// <summary>
+        /// 备份目录
+        /// </summary>
+        public const string Const_BackupFolder = "Buckups\\";
+
         #endregion 常量
 
         #region 枚举
@@ -378,7 +415,12 @@ namespace Into_The_Breach_AutoSave
         /// <summary>
         /// 等待计时器
         /// </summary>
-        public Timer WaitTimer { set; get; } = new Timer();
+        public System.Timers.Timer WaitTimer { set; get; } = new System.Timers.Timer();
+
+        /// <summary>
+        /// 控件初始化中
+        /// </summary>
+        public bool IsOnInit { private set; get; } = true;
 
         #endregion 属性
 
@@ -402,6 +444,7 @@ namespace Into_The_Breach_AutoSave
             Preference.LoadFromFile();
             MainWindow.Window.SetWatchFolder(Preference.Instance.SavePath);
             InitializeComponent();
+            IsOnInit = false;
             Preference.Instance.SetToUI();
         }
 
@@ -426,7 +469,7 @@ namespace Into_The_Breach_AutoSave
                                  | NotifyFilters.DirectoryName,
 
                 // Only watch text files.
-                Filter = "*.lua",
+                Filter = Preference.Instance.FileFilter,
                 IncludeSubdirectories = true,
             };
 
@@ -479,7 +522,7 @@ namespace Into_The_Breach_AutoSave
                 s.SetLevel(compressionLevel);   //0 - store only to 9 - means best compression   
                 foreach (FileInfo file in fileNames)
                 {
-                    FileStream fs = null;
+                    FileStream fs;
                     try
                     {
                         fs = file.Open(FileMode.Open, FileAccess.ReadWrite);
@@ -529,12 +572,82 @@ namespace Into_The_Breach_AutoSave
         /// 生成备份文件包
         /// </summary>
         /// <param name="dir">目标目录</param>
-        public static void GenerateBackupPacket(DirectoryInfo dir)
+        /// <returns>备份文件路径</returns>
+        public static string GenerateBackupPacket(DirectoryInfo dir)
         {
             List<FileInfo> fileList = new List<FileInfo>();
             GetFileList(dir, fileList);
-            string fileName = $"{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-ffff")}.zip";
+            string fileName = $"{Const_BackupFolder}{DateTime.Now:yyyy-MM-dd-HH-mm-ss-ffff}.zip";
+            if (!Directory.Exists(Const_BackupFolder)) Directory.CreateDirectory(Const_BackupFolder);
             Compress(fileList, dir.FullName, fileName, 9);
+            return fileName;
+        }
+
+        /// <summary>
+        /// 增加备份记录
+        /// </summary>
+        /// <param name="path">备份路径</param>
+        public void AddBackupRecord(string path)
+        {
+            FileInfo file = new FileInfo(path);
+            string fullPath = file.FullName;
+            Preference.Instance.BackupFiles.Insert(0, fullPath);
+            bool outOfCount = Preference.Instance.IsOutOfBackupCount();
+            ListView_Backups.Items.Insert(0,
+                new ListViewItem()
+                {
+                    Content = System.IO.Path.GetFileNameWithoutExtension(fullPath),
+                    Tag = fullPath,
+                }
+                );
+            if (outOfCount)
+            {
+                string last = Preference.Instance.BackupFiles.Last();
+                RemoveBackupRecord(last);
+                ListView_Backups.Items.RemoveAt(Preference.Instance.MaxBackupCount);
+            }
+        }
+
+        /// <summary>
+        /// 删除备份记录
+        /// </summary>
+        /// <param name="path">备份路径</param>
+        public void RemoveBackupRecord(string path)
+        {
+            Preference.Instance.BackupFiles.Remove(path);
+            File.Delete(path);
+        }
+
+        /// <summary>
+        /// 刷新备份记录
+        /// </summary>
+        public void RefreshBackupRecord()
+        {
+            ListView_Backups.Items.Clear();
+            foreach (string path in Preference.Instance.BackupFiles)
+            {
+                ListView_Backups.Items.Insert(0,
+                   new ListViewItem()
+                   {
+                       Content = System.IO.Path.GetFileNameWithoutExtension(path),
+                       Tag = path,
+                   }
+                   );
+            }
+        }
+
+        /// <summary>
+        /// 保存备份记录
+        /// </summary>
+        public void SaveBackupRecord()
+        {
+            Preference.Instance.BackupFiles.Clear();
+            foreach (ListViewItem item in ListView_Backups.Items)
+            {
+                string path = item.Tag as string;
+                if (File.Exists(path))
+                    Preference.Instance.BackupFiles.Insert(0, path);
+            }
         }
 
         #endregion 通用方法
@@ -553,6 +666,8 @@ namespace Into_The_Breach_AutoSave
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             Preference.SaveToFile(Preference.Preference_ConfigFile);
+            WaitTimer.Stop();
+            WaitTimer.Dispose();
         }
 
         /// <summary>
@@ -565,6 +680,80 @@ namespace Into_The_Breach_AutoSave
             IsWatcherActive = !IsWatcherActive;
             SelectPathControl_SaveFolder.IsEnabled = !IsWatcherActive;
             Button_Active.Content = IsWatcherActive ? "停止" : "激活";
+        }
+
+        /// <summary>
+        /// 最大备份数量变化事件
+        /// </summary>
+        /// <param name="sender">事件控件</param>
+        /// <param name="e">响应参数</param>
+        private void NumbicUpDown_MaxBackupCount_ValueChanged(object sender, ControlLib.ValueChangedEventArgs e)
+        {
+            int maxCount = (int)NumbicUpDown_MaxBackupCount.Value;
+            Preference.Instance.MaxBackupCount = maxCount;
+            Preference.Instance.RemoveNoFileBackups();
+            int existCount = Preference.Instance.BackupFiles.Count;
+            if (existCount > maxCount)
+            {
+                foreach (string path in Preference.Instance.BackupFiles.Skip(maxCount))
+                {
+                    File.Delete(path);
+                }
+                Preference.Instance.BackupFiles.RemoveRange(maxCount - 1, existCount - maxCount);
+                if (!IsOnInit)
+                    RefreshBackupRecord();
+            }
+        }
+
+        /// <summary>
+        /// 检测间隔变化事件
+        /// </summary>
+        /// <param name="sender">事件控件</param>
+        /// <param name="e">响应参数</param>
+        private void NumbicUpDown_WaitInterval_ValueChanged(object sender, ControlLib.ValueChangedEventArgs e)
+        {
+            Preference.Instance.WaitInterval = (int)NumbicUpDown_WaitInterval.Value;
+        }
+
+        /// <summary>
+        /// 文件筛选文本变化事件
+        /// </summary>
+        /// <param name="sender">事件控件</param>
+        /// <param name="e">响应参数</param>
+        private void TextBox_WatcherFilter_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            Preference.Instance.FileFilter = TextBox_WatcherFilter.Text;
+            bool enable = Watcher.EnableRaisingEvents;
+            if (enable) Watcher.EnableRaisingEvents = false;
+            Watcher.Filter = Preference.Instance.FileFilter;
+            if (enable) Watcher.EnableRaisingEvents = true;
+        }
+
+        /// <summary>
+        /// 删除按钮点击事件
+        /// </summary>
+        /// <param name="source">事件来源</param>
+        /// <param name="e">事件参数</param>
+        private void Button_Delete_Click(object sender, RoutedEventArgs e)
+        {
+            if (ListView_Backups.SelectedItem is ListViewItem item && item != null)
+            {
+                string path = item.Tag as string; 
+                RemoveBackupRecord(path);
+                ListView_Backups.Items.Remove(item);
+            } 
+        }
+
+        /// <summary>
+        /// 选择项切换事件
+        /// </summary>
+        /// <param name="source">事件来源</param>
+        /// <param name="e">事件参数</param>
+        private void ListView_Backups_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            bool enable = ListView_Backups.SelectedItem != null && SelectPathControl_SaveFolder.IsPathExist == true;
+            Button_Load.IsEnabled = enable;
+            Button_Delete.IsEnabled = enable;
         }
 
         /// <summary>
@@ -586,11 +775,15 @@ namespace Into_The_Breach_AutoSave
         /// <param name="e">事件参数</param>
         public void WaitTimerTimeout(object source, System.Timers.ElapsedEventArgs e)
         {
-            GenerateBackupPacket(new DirectoryInfo(Preference.Instance.SavePath));
+            string path = GenerateBackupPacket(new DirectoryInfo(Preference.Instance.SavePath));
+            _ = Application.Current.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal,
+                    (ThreadStart)delegate ()
+                    {
+                        AddBackupRecord(path);
+                    });
         }
         #endregion 事件方法 
 
         #endregion 方法
-
     }
 }

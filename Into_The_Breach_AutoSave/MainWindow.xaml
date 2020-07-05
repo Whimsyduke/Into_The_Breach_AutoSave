@@ -42,6 +42,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <Button
                         x:Name="Button_Active"
@@ -55,7 +56,14 @@
                         Grid.Column="1"
                         Margin="3"
                         Content="加载"
-                        IsEnabled="{Binding ElementName=SelectPathControl_SaveFolder, Path=IsPathExist}" />
+                        IsEnabled="False" />
+                    <Button
+                        x:Name="Button_Delete"
+                        Grid.Column="2"
+                        Margin="3"
+                        Click="Button_Delete_Click"
+                        Content="删除"
+                        IsEnabled="False" />
                 </Grid>
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
@@ -66,8 +74,8 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock
                         Grid.Column="0"
-                        VerticalAlignment="Center"
                         Margin="3"
+                        VerticalAlignment="Center"
                         Text="备份上限：" />
                     <controlLib:NumericUpDown
                         x:Name="NumbicUpDown_MaxBackupCount"
@@ -76,7 +84,8 @@
                         Margin="3"
                         Increment="1"
                         MaxValue="500"
-                        MinValue="0"
+                        MinValue="1"
+                        ValueChanged="NumbicUpDown_MaxBackupCount_ValueChanged"
                         Value="{x:Static local:Preference.Const_MaxBackupCount}" />
                     <TextBlock
                         Grid.Column="2"
@@ -91,6 +100,7 @@
                         Increment="1"
                         MaxValue="100000"
                         MinValue="0"
+                        ValueChanged="NumbicUpDown_WaitInterval_ValueChanged"
                         Value="{x:Static local:Preference.Const_WaitInterval}" />
                 </Grid>
                 <Grid Grid.Row="2">
@@ -107,7 +117,8 @@
                         x:Name="TextBox_WatcherFilter"
                         Grid.Column="1"
                         Margin="3"
-                        Text="{x:Static local:Preference.Const_FileFilter}" />
+                        Text="{x:Static local:Preference.Const_FileFilter}"
+                        TextChanged="TextBox_WatcherFilter_TextChanged" />
                 </Grid>
             </Grid>
         </GroupBox>
@@ -115,7 +126,11 @@
             Grid.Row="2"
             Margin="3"
             Header="存档列表">
-            <ListView x:Name="ListView_BackUps" />
+            <ListView
+                x:Name="ListView_Backups"
+                Margin="3"
+                SelectionChanged="ListView_Backups_SelectionChanged"
+                SelectionMode="Single" />
         </GroupBox>
     </Grid>
 </Window>
