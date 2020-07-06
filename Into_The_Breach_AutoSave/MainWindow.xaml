@@ -26,7 +26,8 @@
                 x:Name="SelectPathControl_SaveFolder"
                 Margin="3"
                 ButtonContent="路径"
-                ControlType="SelectPath" />
+                ControlType="SelectPath"
+                TextChangeHandler="SelectPathControl_SaveFolder_TextChangeHandler" />
         </GroupBox>
         <GroupBox
             Grid.Row="1"
@@ -92,9 +93,9 @@
                         Width="Auto"
                         Margin="3"
                         Increment="1"
+                        LostFocus="NumbicUpDown_MaxBackupCount_LostFocus"
                         MaxValue="500"
                         MinValue="1"
-                        ValueChanged="NumbicUpDown_MaxBackupCount_ValueChanged"
                         Value="{x:Static local:Preference.Const_MaxBackupCount}" />
                     <TextBlock
                         Grid.Column="2"

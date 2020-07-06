@@ -788,7 +788,7 @@ namespace Into_The_Breach_AutoSave
         /// </summary>
         /// <param name="sender">事件控件</param>
         /// <param name="e">响应参数</param>
-        private void NumbicUpDown_MaxBackupCount_ValueChanged(object sender, ControlLib.ValueChangedEventArgs e)
+        private void NumbicUpDown_MaxBackupCount_LostFocus(object sender, RoutedEventArgs e)
         {
             int maxCount = (int)NumbicUpDown_MaxBackupCount.Value;
             Preference.Instance.MaxBackupCount = maxCount;
@@ -901,6 +901,23 @@ namespace Into_The_Breach_AutoSave
             bool enable = ListView_Backups.SelectedItem != null && SelectPathControl_SaveFolder.IsPathExist == true;
             Button_Restore.IsEnabled = enable;
             Button_Delete.IsEnabled = enable;
+        }
+
+        /// <summary>
+        /// 路径文本变化事件
+        /// </summary>
+        /// <param name="source">事件来源</param>
+        /// <param name="e">事件参数</param>
+        private void SelectPathControl_SaveFolder_TextChangeHandler(object sender, RoutedEventArgs e)
+        {
+            if(Directory.Exists(SelectPathControl_SaveFolder.PathText))
+            {
+                Preference.Instance.SavePath = SelectPathControl_SaveFolder.PathText;
+            }
+            else
+            {
+                Preference.Instance.SavePath = string.Empty;
+            }
         }
 
         /// <summary>
